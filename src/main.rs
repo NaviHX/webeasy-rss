@@ -35,7 +35,13 @@ async fn main() {
     ));
     let rss_server = warp::path("rss").and(warp::get()).map({
         let channel_handle = channel_handle.clone();
-        move || channel_handle.read().unwrap().to_string()
+        move || {
+            info!("Receive an RSS request");
+            let reply = channel_handle.read().unwrap().to_string();
+            info!("{:?}", channel_handle.read().unwrap().items());
+            info!("Reply: {}", reply);
+            reply
+        }
     });
 
     tokio::spawn(async move {
@@ -69,7 +75,7 @@ async fn main() {
             .build();
 
         *(channel_handle.write().unwrap()) = channel;
-        debug!("Crawled NHK site");
+        info!("Crawled NHK site");
         tokio::time::sleep(tokio::time::Duration::from_millis(crawl_delay)).await;
     }
 }

@@ -64,7 +64,7 @@ impl Scraper for NhkWebEasyCrawler {
                         let pub_date = news_item.news_prearranged_time;
                         let parsed_pub_date = UTCP9.unwrap().datetime_from_str(&pub_date, "%Y-%m-%d %H:%M:%S")?;
                         let parsed_pub_date = parsed_pub_date.to_rfc2822();
-                        debug!("News Post: {title} {id}");
+                        info!("News Post: {title} {id}");
                         crawler
                             .visit_with_state(news_url, NhkWebEasyCrawlerState::Post { title, id, pub_date: parsed_pub_date });
                     }
@@ -78,7 +78,7 @@ impl Scraper for NhkWebEasyCrawler {
                     // HACK `selected` is an iterator but we only need the first element.
                     if let Some(article_element) = selected.next() {
                         let content = article_element.inner_html();
-                        debug!("Get Post: {title} {id}");
+                        info!("Get Post: {title} {id}");
                         return Ok(Some(Post {
                             title,
                             content,
