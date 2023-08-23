@@ -2,9 +2,9 @@
 extern crate log;
 extern crate pretty_env_logger;
 
+mod args;
 mod post;
 mod post_crawler;
-mod args;
 
 use clap::Parser;
 use futures::stream::StreamExt;
@@ -19,10 +19,12 @@ const DESCRIPTION: &str = "A 3rd-party NHK Web Easy RSS Feed";
 #[tokio::main]
 async fn main() {
     pretty_env_logger::init();
-    let args = args::Args::parse();
-    let app_port = args.port;
-    let app_crawl_delay = args.crawl_delay;
-    let app_request_delay = args.request_delay;
+    let args::Args {
+        ip,
+        port,
+        crawl_delay,
+        request_delay,
+    } = args::Args::parse();
 
     let channel_handle = Arc::new(RwLock::new(
         rss::ChannelBuilder::default()
@@ -36,11 +38,15 @@ async fn main() {
         move || channel_handle.read().unwrap().to_string()
     });
 
-    tokio::spawn(async move { warp::serve(rss_server).run(([127, 0, 0, 1], app_port)).await });
+    tokio::spawn(async move {
+        warp::serve(rss_server)
+            .run((ip, port))
+            .await
+    });
 
     loop {
         let mut news_crawler = post_crawler::NhkWebEasyCrawler::new(voyager::RequestDelay::Fixed(
-            std::time::Duration::from_millis(app_request_delay),
+            std::time::Duration::from_millis(request_delay),
         ));
         let mut posts: Vec<rss::Item> = vec![];
 
@@ -64,6 +70,6 @@ async fn main() {
 
         *(channel_handle.write().unwrap()) = channel;
         debug!("Crawled NHK site");
-        tokio::time::sleep(tokio::time::Duration::from_millis(app_crawl_delay)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(crawl_delay)).await;
     }
 }
