@@ -44,11 +44,7 @@ async fn main() {
         }
     });
 
-    tokio::spawn(async move {
-        warp::serve(rss_server)
-            .run((ip, port))
-            .await
-    });
+    tokio::spawn(async move { warp::serve(rss_server).run((ip, port)).await });
 
     loop {
         let mut news_crawler = post_crawler::NhkWebEasyCrawler::new(voyager::RequestDelay::Fixed(
@@ -57,14 +53,21 @@ async fn main() {
         let mut posts: Vec<rss::Item> = vec![];
 
         while let Some(post) = news_crawler.next().await {
-            let Ok(post) = post else { continue };
-            let p = ItemBuilder::default()
-                .title(Some(post.title))
-                .link(Some(post.url))
-                .content(Some(post.content))
-                .pub_date(Some(post.pub_date))
-                .build();
-            posts.push(p);
+            match post {
+                Err(e) => {
+                    info!("{e}");
+                    continue;
+                }
+                Ok(post) => {
+                    let p = ItemBuilder::default()
+                        .title(Some(post.title))
+                        .link(Some(post.url))
+                        .content(Some(post.content))
+                        .pub_date(Some(post.pub_date))
+                        .build();
+                    posts.push(p);
+                }
+            }
         }
 
         let channel = rss::ChannelBuilder::default()
